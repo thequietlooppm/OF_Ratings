@@ -13,7 +13,7 @@ import type { Rating, Meta } from './types/rating'
 import ratingsData from './data/ratings.json'
 import metaData from './data/meta.json'
 
-const ratings = ratingsData as Rating[]
+const ratings = (ratingsData as Rating[]).filter(r => r.hasCoords)
 const meta = metaData as Meta
 
 const theme = createTheme({ palette: { mode: 'light' } })
@@ -65,9 +65,6 @@ function App() {
                         <Typography variant="caption" color="text.secondary" component="span">
                           {r.city}, {r.state}
                         </Typography>
-                      )}
-                      {!r.hasCoords && (
-                        <Chip label="No coords" size="small" variant="outlined" color="warning" />
                       )}
                     </Box>
                   }
