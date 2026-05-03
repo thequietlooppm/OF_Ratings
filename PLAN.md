@@ -36,7 +36,9 @@ flowchart LR
 | `lat`             | yes*     | decimal, e.g. `41.8781`                        |
 | `lng`             | yes*     | decimal, e.g. `-87.6298`                       |
 | `google_maps_url` | no       | full Google Maps share URL                     |
-| `address`         | no       | display only                                   |
+| `address`         | no       | full street address, display only              |
+| `city`            | no       | extracted from geocoder, useful for filtering  |
+| `state`           | no       | extracted from geocoder, useful for filtering  |
 | `date_visited`    | no       | ISO date, used for sorting later               |
 
 \* If missing, Phase 1's sync script flags the row and an optional helper offers to auto-fill via OpenStreetMap's free Nominatim geocoder. You can also fill them by right-clicking in Google Maps (the first menu item is the coordinate pair, click to copy).
@@ -135,23 +137,29 @@ The original approach used `npm run deploy` + the `gh-pages` package. GitHub Act
 
 ### Phase 1 prerequisites (you do these before writing any code)
 
-1. **Create the unified Google Sheet** (new file, not a tab in an existing file):
-   - Set up the header row: `rater`, `location_name`, `rating`, `notes`, `lat`, `lng`, `google_maps_url`, `address`, `date_visited`
-   - Copy Brad's rows in, adding `Brad` in the `rater` column for each.
-   - Copy Kyle's rows in, adding `Kyle` in the `rater` column for each.
-   - Note the **sheet ID** from the URL (the long string between `/d/` and `/edit`).
-   - Note the **tab name** (default is `Sheet1` — rename it if you like, just record it).
+> ✅ All prerequisites below are already complete as of Phase 0 work.
+
+1. ✅ **Unified Google Sheet created** — `WebPage` tab in sheet `1vSMuoIyETtCjNhlH0BZFxfJhl4ZwsJDCFqY7qOlnfMA`. Headers: `rater`, `rating`, `notes`, `googleMapsUrl`, `locationName`, `address`, `lat`, `lng`, `dateVisited`, `state`, `city`. All rows populated via `npm run lookup`.
 
 ### Phase 1 Google Cloud setup (one-time, manual)
 
-2. In Google Cloud Console: create a project (e.g. `of-ratings`), enable **Google Sheets API**.
-3. Create a **service account**, generate a JSON key, download as `secrets/service-account.json`.
-4. In the sheet, click Share → paste the service-account email → role **Viewer**.
-5. Create `.env` with:
-   ```
-   SHEET_ID=<your-sheet-id>
-   SHEET_TAB=Sheet1
-   ```
+> ✅ All Google Cloud steps below are already complete.
+
+2. ✅ Google Cloud project `of-ratings` created, **Google Sheets API** enabled.
+3. ✅ Service account `of-ratings-sync@of-ratings.iam.gserviceaccount.com` created, JSON key at `secrets/service-account.json` (gitignored).
+4. ✅ Sheet shared with service account as **Editor**.
+5. ✅ `.env` created with `SHEET_ID` and `SHEET_TAB`.
+
+### Phase 1 GitHub configuration (one-time, manual — do this before the cron workflow runs)
+
+6. Go to **repo Settings → Secrets and variables → Actions**.
+7. Under **Secrets**, click "New repository secret":
+   - Name: `GOOGLE_SERVICE_ACCOUNT_JSON`
+   - Value: paste the entire contents of `secrets/service-account.json` (the full JSON)
+8. Under **Variables**, click "New repository variable" twice:
+   - Name: `SHEET_ID`, Value: `1vSMuoIyETtCjNhlH0BZFxfJhl4ZwsJDCFqY7qOlnfMA`
+   - Name: `SHEET_TAB`, Value: `WebPage`
+9. GitHub Pages source is already set to **GitHub Actions** (done in Phase 0) — no change needed.
 
 ### Phase 1 implementation tasks
 
@@ -168,6 +176,8 @@ The original approach used `npm run deploy` + the `gh-pages` package. GitHub Act
      lng?: number;
      googleMapsUrl?: string;
      address?: string;
+     city?: string;
+     state?: string;
      dateVisited?: string;
      hasCoords: boolean;
    };
@@ -188,7 +198,7 @@ The original approach used `npm run deploy` + the `gh-pages` package. GitHub Act
 6. **Add GitHub Actions cron sync** at `.github/workflows/sync.yml`:
    - Triggers: `schedule` (`0 6 * * *` — daily at 6am UTC) + `workflow_dispatch` for manual runs.
    - Steps: checkout → setup Node 20 → `npm ci` → `npm run sync` → commit `src/data/` if changed → push to `main` (which triggers the deploy workflow).
-   - GitHub Secrets needed: `GOOGLE_SERVICE_ACCOUNT_JSON` (paste full JSON content). Repo variable: `SHEET_ID`.
+   - GitHub Secrets needed: `GOOGLE_SERVICE_ACCOUNT_JSON` (paste full JSON content). Repo variables: `SHEET_ID`, `SHEET_TAB`.
 7. Update `App.tsx` to import `ratings.json` and render a simple MUI `<List>` of all rows (rater, location, rating, notes, "missing coordinates" chip when applicable). Show `meta.lastSyncedAt` in the AppBar.
 
 ### Phase 1 acceptance / test plan
