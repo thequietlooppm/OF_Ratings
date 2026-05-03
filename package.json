@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "lookup": "tsx scripts/lookup-place.ts"
+    "lookup": "tsx scripts/lookup-place.ts",
+    "sync": "tsx scripts/sync-sheet.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
